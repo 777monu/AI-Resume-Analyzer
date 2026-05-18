@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Analysis History</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Your Analysis History</h1>
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search Skills..."
+            onkeyup="searchHistory()"
+        >
+
+        <br><br>
+
+        {% for item in history %}
+
+            <div class="score-box history-item">
+
+                <h2>
+                    ATS Score: {{ item.score }}%
+                </h2>
+
+                <p>
+
+                    <strong>Skills:</strong>
+
+                    {{ item.skills }}
+
+                </p>
+
+            </div>
+
+        {% endfor %}
+
+        <a href="/dashboard">
+
+            <button>
+
+                Back to Dashboard
+
+            </button>
+
+        </a>
+
+    </div>
+
+<script>
+
+function searchHistory() {
+
+    let input =
+        document.getElementById(
+            'searchInput'
+        ).value.toLowerCase();
+
+    let items =
+        document.getElementsByClassName(
+            'history-item'
+        );
+
+    for (let i = 0; i < items.length; i++) {
+
+        let text =
+            items[i].innerText.toLowerCase();
+
+        if (text.includes(input)) {
+
+            items[i].style.display = "";
+
+        } else {
+
+            items[i].style.display = "none";
+        }
+    }
+}
+
+</script>
+
+</body>
+
+</html>

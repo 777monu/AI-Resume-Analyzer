@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Admin Dashboard</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Admin Dashboard</h1>
+
+    <div class="score-box">
+
+        <h2>Total Users: {{ total_users }}</h2>
+
+        <h2>Total Resume Analysis: {{ total_analysis }}</h2>
+
+    </div>
+
+    <br>
+
+    <h2>All Analysis Records</h2>
+
+    <table border="1" width="100%" cellpadding="10">
+
+        <tr>
+
+            <th>User</th>
+
+            <th>ATS Score</th>
+
+            <th>Skills</th>
+
+        </tr>
+
+        {% for item in all_analysis %}
+
+        <tr>
+
+            <td>{{ item.username }}</td>
+
+            <td>{{ item.score }}%</td>
+
+            <td>{{ item.skills }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    <br>
+
+    <a href="/dashboard">
+
+        <button>Back to Dashboard</button>
+
+    </a>
+
+</div>
+
+</body>
+
+</html>

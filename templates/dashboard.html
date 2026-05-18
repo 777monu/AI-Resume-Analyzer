@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Welcome {{ current_user.username }}</h1>
+
+    <h2>AI Resume Analyzer Dashboard</h2>
+
+    
+
+    <a href="/">
+        <button>Analyze Resume</button>
+    </a>
+   
+
+{% if current_user.username == "admin" %}
+
+
+<a href="/admin">
+
+    <button>
+
+        Admin Dashboard
+
+    </button>
+
+</a>
+
+{% endif %}
+ 
+
+    <a href="/history">
+        <button>View Analysis History</button>
+    </a>
+
+   
+
+    <a href="/download_report">
+        <button>Download PDF Report</button>
+    </a>
+
+  
+
+    <a href="/logout">
+        <button>Logout</button>
+    </a>
+
+</div>
+
+</body>
+</html>

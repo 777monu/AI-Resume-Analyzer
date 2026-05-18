@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>ATS Result</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>AI Resume Analyzer</h1>
+
+    <div class="dashboard-grid">
+
+        <div class="card">
+
+    <h2>ATS Score</h2>
+
+    {% if score >= 75 %}
+
+        <p style="color: green; font-size: 28px; font-weight: bold;">
+
+            {{ score }}% - Excellent
+
+        </p>
+
+    {% elif score >= 50 %}
+
+        <p style="color: orange; font-size: 28px; font-weight: bold;">
+
+            {{ score }}% - Average
+
+        </p>
+
+    {% else %}
+
+        <p style="color: red; font-size: 28px; font-weight: bold;">
+
+            {{ score }}% - Needs Improvement
+
+        </p>
+
+    {% endif %}
+
+</div>
+
+        <div class="card">
+            <h2>Detected Skills</h2>
+            <p>{{ detected_skills|length }}</p>
+        </div>
+
+        <div class="card">
+            <h2>Missing Skills</h2>
+            <p>{{ missing_skills|length }}</p>
+        </div>
+
+    </div>
+
+    <br>
+
+    <div class="score-box">
+
+        <canvas id="atsChart"></canvas>
+
+    </div>
+
+    <br>
+
+    <div class="score-box">
+
+        <h2>Detected Skills</h2>
+
+        <ul>
+            {% for skill in detected_skills %}
+                <li>{{ skill }}</li>
+            {% endfor %}
+        </ul>
+
+    </div>
+
+    <br>
+
+    <div class="score-box">
+
+        <h2>Missing Skills</h2>
+
+        <ul>
+            {% for skill in missing_skills %}
+                <li>{{ skill }}</li>
+            {% endfor %}
+        </ul>
+
+    </div>
+
+    <br>
+
+    <div class="score-box">
+
+        <h2>Suggestions</h2>
+
+        <ul>
+            {% for suggestion in suggestions %}
+                <li>{{ suggestion }}</li>
+            {% endfor %}
+        </ul>
+
+    </div>
+
+    <br>
+
+    <a href="/download_report">
+        <button>Download PDF Report</button>
+    </a>
+
+    <br><br>
+
+    <a href="/dashboard">
+        <button>Back to Dashboard</button>
+    </a>
+
+</div>
+
+<script>
+
+const ctx = document.getElementById('atsChart');
+
+new Chart(ctx, {
+
+    type: 'doughnut',
+
+    data: {
+
+        labels: ['ATS Score', 'Remaining'],
+
+        datasets: [{
+
+            data: [{{ score }}, 100 - {{ score }}]
+
+        }]
+    },
+
+    options: {
+
+        responsive: true,
+
+        plugins: {
+
+            legend: {
+                position: 'bottom'
+            }
+
+        }
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>

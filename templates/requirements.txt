@@ -1,0 +1,9 @@
+flask
+flask-login
+flask-sqlalchemy
+flask-mail
+scikit-learn
+PyPDF2
+python-docx
+reportlab
+gunicorn
