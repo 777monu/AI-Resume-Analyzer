@@ -4,3 +4,4 @@ pandas
 scikit-learn
 PyPDF2
 Flask-Mail
+gunicorn
