@@ -6,3 +6,4 @@ PyPDF2
 Flask-Mail
 gunicorn
 reportlab
+python-docx
