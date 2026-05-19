@@ -176,8 +176,11 @@ def history():
     data = Analysis.query.filter_by(username=current_user.username).all()
     return render_template('history.html', history=data)
 
+@app.route('/')
+def first():
+    return redirect('/login')
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/home', methods=['GET', 'POST'])
 @login_required
 def home():
 
