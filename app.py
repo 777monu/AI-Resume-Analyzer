@@ -1,3 +1,8 @@
+from openai import OpenAI
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
 from flask_mail import Mail, Message
 from flask import Flask, render_template, request, redirect, send_file
 from reportlab.pdfgen import canvas
@@ -20,6 +25,9 @@ from flask_login import (
 )
 
 app = Flask("AI Resume Analyzer")
+client = OpenAI(
+    api_key="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"
+)
 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -129,7 +137,29 @@ def skill_match(resume_skills, missing_skills):
         return 0
     return round((len(resume_skills) / total) * 100, 2)
 
+def generate_ai_feedback(resume_text):
 
+    response = client.chat.completions.create(
+
+        model="gpt-3.5-turbo",
+
+        messages=[
+
+            {
+                "role": "system",
+                "content": "You are a professional ATS resume reviewer."
+            },
+
+            {
+                "role": "user",
+                "content": f"Review this resume and give improvement suggestions:\n\n{resume_text}"
+            }
+
+        ]
+
+    )
+
+    return response.choices[0].message.content
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -224,6 +254,7 @@ def home():
         )
 
         suggestions = []
+        ai_feedback = generate_ai_feedback(resume_text)
 
         if score < 50:
             suggestions.append("Add more technical skills")
@@ -276,14 +307,15 @@ Suggestions:
 '''
 
             mail.send(msg)
-        return render_template(
-            'result.html',
-            score=score,
-            missing_skills=missing_skills,
-            detected_skills=detected_skills,
-            suggestions=suggestions,
-            match_percent=match_percent
-        )
+       return render_template(
+    'result.html',
+    score=score,
+    missing_skills=missing_skills,
+    detected_skills=detected_skills,
+    suggestions=suggestions,
+    match_percent=match_percent,
+    ai_feedback=ai_feedback
+)
 
     return render_template('index.html')
 
@@ -356,6 +388,23 @@ def admin():
     total_analysis = Analysis.query.count()
 
     all_analysis = Analysis.query.all()
+    scores = [a.score for a in all_analysis]
+
+if scores:
+
+    plt.figure(figsize=(6,4))
+
+    plt.plot(scores)
+
+    plt.title("ATS Score Analytics")
+
+    plt.xlabel("Analysis Count")
+
+    plt.ylabel("ATS Score")
+
+    plt.savefig("static/chart.png")
+
+    plt.close()
 
     return render_template(
         'admin.html',
