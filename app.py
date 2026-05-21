@@ -24,19 +24,13 @@ from flask_login import (
     current_user
 )
 
-app = Flask("AI Resume Analyzer")
-client = OpenAI(
-    api_key="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"
-)
+# ---------------- APP SETUP ----------------
+app = Flask(__name__)
 
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
+app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['SECRET_KEY'] = 'secretkey'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'monuvijith726@gmail.com'
@@ -45,14 +39,23 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 
 mail = Mail(app)
-
 db.init_app(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# ---------------- OPENAI (FIXED) ----------------
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
+)
 
+# ---------------- UPLOAD FOLDER ----------------
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# ---------------- GLOBAL REPORT ----------------
 latest_report = {
     "score": 0,
     "skills": [],
@@ -60,7 +63,7 @@ latest_report = {
     "suggestions": []
 }
 
-
+# ---------------- MODELS ----------------
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True)
@@ -78,14 +81,14 @@ class Analysis(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-
+# ---------------- SKILLS ----------------
 skills_list = [
     "python", "flask", "html", "css", "javascript",
     "sql", "machine learning", "git", "github",
     "api", "django", "react"
 ]
 
-
+# ---------------- HELPERS ----------------
 def extract_text(pdf_path):
     text = ""
     try:
@@ -137,29 +140,18 @@ def skill_match(resume_skills, missing_skills):
         return 0
     return round((len(resume_skills) / total) * 100, 2)
 
+
 def generate_ai_feedback(resume_text):
-
     response = client.chat.completions.create(
-
         model="gpt-3.5-turbo",
-
         messages=[
-
-            {
-                "role": "system",
-                "content": "You are a professional ATS resume reviewer."
-            },
-
-            {
-                "role": "user",
-                "content": f"Review this resume and give improvement suggestions:\n\n{resume_text}"
-            }
-
+            {"role": "system", "content": "You are a professional ATS resume reviewer."},
+            {"role": "user", "content": f"Review this resume and give improvement suggestions:\n\n{resume_text}"}
         ]
-
     )
-
     return response.choices[0].message.content
+
+# ---------------- ROUTES ----------------
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -180,10 +172,13 @@ def login():
             username=request.form['username'],
             password=request.form['password']
         ).first()
+
         if user:
             login_user(user)
             return redirect('/dashboard')
+
         return "Invalid Username or Password"
+
     return render_template('login.html')
 
 
@@ -206,6 +201,7 @@ def history():
     data = Analysis.query.filter_by(username=current_user.username).all()
     return render_template('history.html', history=data)
 
+
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
@@ -215,43 +211,23 @@ def home():
         job_description = request.form['job_description']
         email = request.form['email']
 
-        filepath = os.path.join(
-            app.config['UPLOAD_FOLDER'],
-            file.filename
-        )
-
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filepath)
 
         if file.filename.endswith('.pdf'):
             resume_text = extract_text(filepath)
-
         elif file.filename.endswith('.docx'):
             resume_text = extract_docx_text(filepath)
-
         else:
             return "Only PDF and DOCX allowed"
 
         if resume_text == "Could not read PDF":
             return "Invalid PDF"
 
-        score = calculate_score(
-            resume_text,
-            job_description
-        )
-
-        missing_skills = find_missing_skills(
-            resume_text,
-            job_description
-        )
-
-        detected_skills = extract_skills(
-            resume_text
-        )
-
-        match_percent = skill_match(
-            detected_skills,
-            missing_skills
-        )
+        score = calculate_score(resume_text, job_description)
+        missing_skills = find_missing_skills(resume_text, job_description)
+        detected_skills = extract_skills(resume_text)
+        match_percent = skill_match(detected_skills, missing_skills)
 
         suggestions = []
         ai_feedback = generate_ai_feedback(resume_text)
@@ -281,19 +257,18 @@ def home():
 
         db.session.add(analysis)
         db.session.commit()
-        if email:
 
+        if email:
             msg = Message(
                 'ATS Resume Report',
                 sender=app.config['MAIL_USERNAME'],
                 recipients=[email]
             )
 
-            msg.body = f'''
+            msg.body = f"""
+ATS Resume Report
 
-AI Resume Analyzer Report
-
-ATS Score: {score}%
+Score: {score}%
 
 Detected Skills:
 {", ".join(detected_skills)}
@@ -303,19 +278,19 @@ Missing Skills:
 
 Suggestions:
 {", ".join(suggestions)}
-
-'''
+"""
 
             mail.send(msg)
-       return render_template(
-    'result.html',
-    score=score,
-    missing_skills=missing_skills,
-    detected_skills=detected_skills,
-    suggestions=suggestions,
-    match_percent=match_percent,
-    ai_feedback=ai_feedback
-)
+
+        return render_template(
+            'result.html',
+            score=score,
+            missing_skills=missing_skills,
+            detected_skills=detected_skills,
+            suggestions=suggestions,
+            match_percent=match_percent,
+            ai_feedback=ai_feedback
+        )
 
     return render_template('index.html')
 
@@ -323,7 +298,6 @@ Suggestions:
 @app.route('/download_report')
 @login_required
 def download_report():
-
     pdf_path = "ATS_Report.pdf"
     c = canvas.Canvas(pdf_path)
 
@@ -333,48 +307,28 @@ def download_report():
     c.setFont("Helvetica", 12)
     c.drawString(50, 760, f"User: {current_user.username}")
 
-    score = latest_report.get("score", 0)
-    skills = latest_report.get("skills", [])
-    missing = latest_report.get("missing", [])
-    suggestions = latest_report.get("suggestions", [])
+    score = latest_report["score"]
+    skills = latest_report["skills"]
+    missing = latest_report["missing"]
+    suggestions = latest_report["suggestions"]
 
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, 720, f"ATS Score: {score}%")
+    c.drawString(50, 720, f"Score: {score}%")
 
     y = 680
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Detected Skills:")
-    y -= 20
-
-    c.setFont("Helvetica", 11)
-    for s in skills:
-        c.drawString(70, y, f"- {s}")
+    for section, items in [
+        ("Skills", skills),
+        ("Missing Skills", missing),
+        ("Suggestions", suggestions)
+    ]:
+        c.drawString(50, y, section)
         y -= 20
-
-    y -= 10
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Missing Skills:")
-    y -= 20
-
-    c.setFont("Helvetica", 11)
-    for m in missing:
-        c.drawString(70, y, f"- {m}")
-        y -= 20
-
-    y -= 10
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Suggestions:")
-    y -= 20
-
-    c.setFont("Helvetica", 11)
-    for s in suggestions:
-        c.drawString(70, y, f"- {s}")
-        y -= 20
+        for i in items:
+            c.drawString(70, y, f"- {i}")
+            y -= 20
 
     c.save()
-
     return send_file(pdf_path, as_attachment=True)
+
 
 @app.route('/admin')
 @login_required
@@ -384,27 +338,19 @@ def admin():
         return "Access Denied"
 
     total_users = User.query.count()
-
     total_analysis = Analysis.query.count()
-
     all_analysis = Analysis.query.all()
+
     scores = [a.score for a in all_analysis]
 
-if scores:
-
-    plt.figure(figsize=(6,4))
-
-    plt.plot(scores)
-
-    plt.title("ATS Score Analytics")
-
-    plt.xlabel("Analysis Count")
-
-    plt.ylabel("ATS Score")
-
-    plt.savefig("static/chart.png")
-
-    plt.close()
+    if scores:
+        plt.figure(figsize=(6,4))
+        plt.plot(scores)
+        plt.title("ATS Score Analytics")
+        plt.xlabel("Analysis Count")
+        plt.ylabel("ATS Score")
+        plt.savefig("static/chart.png")
+        plt.close()
 
     return render_template(
         'admin.html',
@@ -413,20 +359,12 @@ if scores:
         all_analysis=all_analysis
     )
 
-    total_users = User.query.count()
 
-    total_analysis = Analysis.query.count()
-
-    all_analysis = Analysis.query.all()
-
-    return render_template(
-        'admin.html',
-        total_users=total_users,
-        total_analysis=total_analysis,
-        all_analysis=all_analysis
-    )
+# ---------------- DB INIT ----------------
 with app.app_context():
     db.create_all()
 
+# ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
