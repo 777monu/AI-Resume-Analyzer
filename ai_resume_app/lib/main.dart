@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-
+import 'login_screen.dart';
 import 'result_screen.dart';
 
 void main() {
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: ResumeScreen(),
+      home: DashboardScreen(),
     );
   }
 }
@@ -27,8 +27,13 @@ class _ResumeScreenState extends State<ResumeScreen> {
   PlatformFile? file;
   bool loading = false;
 
+  // 📁 PICK FILE
   Future<void> pickFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'docx'],
+      withData: true,
+    );
 
     if (result != null) {
       setState(() {
@@ -37,6 +42,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
     }
   }
 
+  // 🚀 UPLOAD RESUME
   Future<void> uploadResume() async {
     if (file == null) return;
 
@@ -44,73 +50,130 @@ class _ResumeScreenState extends State<ResumeScreen> {
       loading = true;
     });
 
-    var request = http.MultipartRequest(
-      "POST",
-      Uri.parse("https://YOUR-RENDER-URL.onrender.com/"),
-    );
+    try {
+      var request = http.MultipartRequest(
+        "POST",
+        Uri.parse("https://ai-resume-analyzer-1-piwh.onrender.com"),
+      );
 
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        "resume",
-        file!.bytes!,
-        filename: file!.name,
-      ),
-    );
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          "resume",
+          file!.bytes!,
+          filename: file!.name,
+        ),
+      );
 
-    request.fields["job_description"] = "Software Developer";
-    request.fields["email"] = "test@gmail.com";
+      var response = await request.send().timeout(
+        Duration(seconds: 20),
+        onTimeout: () {
+          throw Exception("Server timeout");
+        },
+      );
 
-    var response = await request.send();
-    var responseData = await response.stream.bytesToString();
+      var responseData = await response.stream.bytesToString();
 
-    setState(() {
-      loading = false;
-    });
+      setState(() {
+        loading = false;
+      });
+Navigator.pushAndRemoveUntil(
+  context,
+  MaterialPageRoute(builder: (context) => DashboardScreen()),
+  (route) => false,
+);
+  
+    } catch (e) {
+      setState(() {
+        loading = false;
+      });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResultScreen(result: responseData),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("AI Resume Analyzer")),
-
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-
-            SizedBox(height: 20),
-
-            Text(
-              file == null
-                  ? "No file selected"
-                  : "Selected: ${file!.name}",
-            ),
-
-            SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: pickFile,
-              child: Text("Pick Resume"),
-            ),
-
-            SizedBox(height: 10),
-
-            ElevatedButton(
-              onPressed: loading ? null : uploadResume,
-              child: loading
-                  ? CircularProgressIndicator(color: Colors.white)
-                  : Text("Analyze Resume"),
-            ),
-          ],
-        ),
+      appBar: AppBar(
+        title: Text("AI Resume Analyzer"),
+        centerTitle: true,
       ),
+
+      body: loading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text("Analyzing Resume..."),
+                ],
+              ),
+            )
+          : Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+
+                  SizedBox(height: 20),
+
+                  Text(
+                    "AI Resume Analyzer",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  SizedBox(height: 30),
+
+                  Container(
+                    padding: EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      file == null
+                          ? "No file selected"
+                          : "Selected File: ${file!.name}",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+
+                  SizedBox(height: 20),
+
+                  ElevatedButton.icon(
+                    onPressed: pickFile,
+                    icon: Icon(Icons.upload_file),
+                    label: Text("Pick Resume"),
+                  ),
+
+                  SizedBox(height: 10),
+
+                  ElevatedButton.icon(
+                    onPressed: loading ? null : uploadResume,
+                    icon: Icon(Icons.analytics),
+                    label: Text("Analyze Resume"),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.all(15),
+                    ),
+                  ),
+
+                  SizedBox(height: 20),
+
+                  Text(
+                    "Upload PDF or DOCX resume to analyze ATS score",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

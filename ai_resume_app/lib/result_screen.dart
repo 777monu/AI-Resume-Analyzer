@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'dashboard_screen.dart';
 class ResultScreen extends StatelessWidget {
   final String result;
 
@@ -9,11 +9,23 @@ class ResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
+appBar: AppBar(
+  title: Text("ATS Result"),
+  centerTitle: true,
 
-      appBar: AppBar(
-        title: Text("ATS Result"),
-        centerTitle: true,
-      ),
+  leading: IconButton(
+    icon: Icon(Icons.arrow_back),
+    onPressed: () {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DashboardScreen(),
+        ),
+        (route) => false,
+      );
+    },
+  ),
+),
 
       body: Padding(
         padding: EdgeInsets.all(16),
@@ -83,3 +95,17 @@ class ResultScreen extends StatelessWidget {
     );
   }
 }
+actions: [
+  IconButton(
+    icon: Icon(Icons.home),
+    onPressed: () {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DashboardScreen(),
+        ),
+        (route) => false,
+      );
+    },
+  ),
+],
